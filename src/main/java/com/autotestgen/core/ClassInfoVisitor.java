@@ -13,7 +13,7 @@ public class ClassInfoVisitor extends VoidVisitorAdapter<Void> {
 
     @Override
     public void visit(FieldDeclaration fd, Void arg) {
-        // Extract all dependencies to mock
+        // 提取所有需要 Mock 的依赖字段
         fd.getVariables().forEach(var -> {
             dependencies.add(var.getTypeAsString() + " " + var.getNameAsString());
         });
@@ -22,7 +22,7 @@ public class ClassInfoVisitor extends VoidVisitorAdapter<Void> {
 
     @Override
     public void visit(MethodDeclaration md, Void arg) {
-        // Extract methods
+        // 提取公开的方法信息，排除构造函数
         if (md.isPublic() && !md.isConstructorDeclaration()) {
             methods.add(md.getNameAsString());
         }

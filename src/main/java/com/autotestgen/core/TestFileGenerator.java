@@ -18,13 +18,13 @@ public class TestFileGenerator {
     }
 
     public void generateTestFile(String sourceFilePath, String baseOutDir) throws Exception {
-        System.out.println("Processing file: " + sourceFilePath);
+        System.out.println("正在处理文件: " + sourceFilePath);
         File file = new File(sourceFilePath);
         CompilationUnit cu = StaticJavaParser.parse(file);
 
-        // Ensure there is a primary type definition
+        // 确保存在主要的类型定义
         if (cu.getTypes().isEmpty()) {
-            System.err.println("No types found in " + sourceFilePath);
+            System.err.println("在目标文件中未找到任何类型定义: " + sourceFilePath);
             return;
         }
 
@@ -35,45 +35,38 @@ public class TestFileGenerator {
         ClassInfoVisitor visitor = new ClassInfoVisitor();
         visitor.visit(classDecl, null);
 
-        System.out.println("Discovered " + visitor.getDependencies().size() + " dependencies.");
+        System.out.println("扫描到 " + visitor.getDependencies().size() + " 个可 Mock 依赖。");
 
-        // Find public methods to test. Here we gather all their source codes and
-        // concatenate
-        // Alternatively we can do it per method, but let's test all public methods
-        // together or individually
-        StringBuilder testsCode = new StringBuilder();
+        // 寻找需要测试的公开方法并收集源码
+        java.util.List<String> methodSources = new java.util.ArrayList<>();
 
         for (MethodDeclaration md : classDecl.getMethods()) {
             if (md.isPublic() && !md.isConstructorDeclaration()) {
-                System.out.println("Generating test for method: " + md.getNameAsString());
-                String prompt = PromptBuilder.buildPrompt(className, visitor.getDependencies(), md.toString());
-
-                String generatedTest = llmClient.generateCode(prompt);
-                testsCode.append(generatedTest).append("\n\n");
+                methodSources.add(md.toString());
             }
         }
 
-        if (testsCode.length() > 0) {
-            saveTestFile(packageName, className, testsCode.toString(), baseOutDir);
-        } else {
-            System.out.println("No public methods found to test.");
+        if (methodSources.isEmpty()) {
+            System.out.println("未找到任何可测试的 public 方法。");
+            return;
         }
+
+        System.out.println("正在为 " + methodSources.size() + " 个方法生成测试代码...");
+        String prompt = PromptBuilder.buildPrompt(className, visitor.getDependencies(), methodSources);
+
+        String generatedTest = llmClient.generateCode(prompt);
+        saveTestFile(packageName, className, generatedTest, baseOutDir);
     }
 
     private void saveTestFile(String packageName, String className, String generatedContent, String baseOutDir)
             throws Exception {
-        // Clean up markdown syntax if GPT didn't follow instructions perfectly
-        if (generatedContent.contains("```java")) {
-            generatedContent = generatedContent.replaceAll("```java\\s*", "");
-            generatedContent = generatedContent.replaceAll("```\\s*", "");
+        // 清理由于 GPT 提示词未完美遵循可能附带的 Markdown 代码块语法
+        if (generatedContent.startsWith("```java")) {
+            generatedContent = generatedContent.replaceFirst("```java\\s*", "");
         }
-        // This generatedContent likely contains multiple class declarations if each
-        // method returned a full class
-        // Typically we would ask LLM to only return the methods if we are aggregating,
-        // OR ask LLM for the entire class at once.
-        // Let's modify the PromptBuilder or just write it directly.
-        // Assuming we are writing it to a file directly. Note: this might create
-        // multiple class definition strings if not careful.
+        if (generatedContent.endsWith("```")) {
+            generatedContent = generatedContent.substring(0, generatedContent.lastIndexOf("```"));
+        }
 
         String testClassName = className + "Test";
         Path outDir = Paths.get(baseOutDir, packageName.replace('.', '/'));
@@ -81,13 +74,13 @@ public class TestFileGenerator {
 
         Path outFile = outDir.resolve(testClassName + ".java");
 
-        // Basic packaging: assuming GPT generated everything inside a class
-        // Add package declaration if missing
+        // 基础包名处理：假设大模型生成了完整的内部类代码
+        // 如果缺失则补充包声明
         if (!generatedContent.contains("package " + packageName + ";")) {
             generatedContent = "package " + packageName + ";\n\n" + generatedContent;
         }
 
         Files.writeString(outFile, generatedContent);
-        System.out.println("✅ Generated test file saved to: " + outFile.toAbsolutePath());
+        System.out.println("✅ 生成完毕，测试文件已保存至: " + outFile.toAbsolutePath());
     }
 }

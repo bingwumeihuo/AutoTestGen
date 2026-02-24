@@ -1,14 +1,12 @@
 package com.autotestgen;
 
-import com.autotestgen.core.TestFileGenerator;
-
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
 public class Main {
     public static void main(String[] args) {
         if (args.length < 2) {
-            System.err.println("Usage: java com.autotestgen.Main <source-file.java> <output-dir>");
+            System.err.println("用法: java com.autotestgen.Main <source-file.java> <output-dir>");
             System.exit(1);
         }
 
@@ -16,15 +14,14 @@ public class Main {
         String outputDir = args[1];
 
         if (!Files.exists(Paths.get(sourceFile))) {
-            System.err.println("Error: Source file does not exist: " + sourceFile);
+            System.err.println("错误: 源文件不存在: " + sourceFile);
             System.exit(1);
         }
 
-        TestFileGenerator generator = new TestFileGenerator();
         try {
-            generator.generateTestFile(sourceFile, outputDir);
+            AutoTestGen.generate(sourceFile, outputDir);
         } catch (Exception e) {
-            System.err.println("Failed to generate test file: " + e.getMessage());
+            System.err.println("生成测试文件失败: " + e.getMessage());
             e.printStackTrace();
             System.exit(1);
         }
