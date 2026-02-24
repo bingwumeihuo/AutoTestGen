@@ -27,7 +27,7 @@ public class Config {
             // ignore
         }
 
-        try (InputStream in = Config.class.getClassLoader().getResourceAsStream("autotestgen-sample.properties")) {
+        try (InputStream in = Config.class.getClassLoader().getResourceAsStream("application.properties")) {
             if (in != null) {
                 properties.load(in);
             }
@@ -48,7 +48,7 @@ public class Config {
             // ignore
         }
 
-        try (FileInputStream fis = new FileInputStream("autotestgen-sample.properties")) {
+        try (FileInputStream fis = new FileInputStream("application.properties")) {
             properties.load(fis);
         } catch (IOException e) {
             // ignore
